@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Ramo Grande de Flores Amarillas 3D — Mi amor</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,#1b2430 0%, #0f1720 100%);}
+    #container{width:100%;height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;}
+    .info {
+      position: absolute; left:12px; top:12px; color:#fff; font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial; 
+      background: rgba(0,0,0,0.35); padding:8px 10px; border-radius:8px; backdrop-filter: blur(4px);
+    }
+    .button {
+      display:inline-block; margin-top:8px; padding:6px 10px; background:rgba(255,255,255,0.08); color:#fff; border-radius:6px;
+      text-decoration:none; font-size:13px;
+    }
+    footer { position: absolute; right:12px; bottom:12px; color:rgba(255,255,255,0.6); font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial; font-size:12px;}
+    canvas{display:block;}
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+  <div class="info">
+    Ramo grande de flores amarillas 3D — "Mi amor".<br>
+    <a class="button" href="#" id="downloadBtn">Descargar HTML</a>
+  </div>
+  <footer>Hecho con Three.js — Envía este archivo a tu novia para que lo abra en su navegador</footer>
+
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+
+  <script>
+  const container = document.getElementById('container');
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 3, 10);
+  const renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  container.appendChild(renderer.domElement);
+
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.9);
+  hemi.position.set(0, 20, 0);
+  scene.add(hemi);
+  const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+  dir.position.set(5, 10, 7);
+  scene.add(dir);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+
+  function createPetal() {
+    const geom = new THREE.SphereGeometry(0.45, 24, 24);
+    for (let i=0;i<geom.attributes.position.count;i++){
+      const y = geom.attributes.position.getY(i);
+      const scale = 1 - Math.abs(y)/0.9;
+      geom.attributes.position.setX(i, geom.attributes.position.getX(i) * (0.65 + 0.6*scale));
+      geom.attributes.position.setZ(i, geom.attributes.position.getZ(i) * (0.65 + 0.6*scale));
+    }
+    geom.computeVertexNormals();
+    const mat = new THREE.MeshStandardMaterial({color:0xffe066, metalness:0.2, roughness:0.6});
+    return new THREE.Mesh(geom, mat);
+  }
+
+  function createFlower(petalCount=6) {
+    const group = new THREE.Group();
+    for (let i=0;i<petalCount;i++){
+      const p = createPetal();
+      const angle = (i / petalCount) * Math.PI * 2;
+      p.position.set(Math.cos(angle)*0.6, 0, Math.sin(angle)*0.6);
+      p.rotation.set(0.5, -angle + Math.PI/2, Math.PI*0.04);
+      group.add(p);
+    }
+    const center = new THREE.Mesh(
+      new THREE.SphereGeometry(0.35, 32, 32),
+      new THREE.MeshStandardMaterial({color:0xd27b00, roughness:0.7})
+    );
+    center.position.y = 0.05;
+    group.add(center);
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06,0.08,2.5,12),
+      new THREE.MeshStandardMaterial({color:0x1b6b2a, roughness:0.9})
+    );
+    stem.position.y = -1.3;
+    group.add(stem);
+    return group;
+  }
+
+  const bouquet = new THREE.Group();
+  for (let i=0;i<12;i++){
+    const f = createFlower(6 + (i%3));
+    const angle = (i/12)*Math.PI*2;
+    f.position.set(Math.cos(angle)*2, 0.3, Math.sin(angle)*2);
+    f.scale.setScalar(1.2);
+    bouquet.add(f);
+  }
+  scene.add(bouquet);
+
+  function makeTextPlane(text){
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 180;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.font = "bold 56px serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(255,230,120,0.95)";
+    ctx.shadowColor = "rgba(255,200,90,0.9)";
+    ctx.shadowBlur = 18;
+    ctx.fillText(text, canvas.width/2, canvas.height/2);
+    const texture = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.MeshBasicMaterial({map:texture, transparent:true, side:THREE.DoubleSide});
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(3.5,1), mat);
+    mesh.position.set(0, 2.5, 0);
+    return mesh;
+  }
+
+  const textMesh = makeTextPlane("Mi amor");
+  scene.add(textMesh);
+
+  let clock = new THREE.Clock();
+  function animate(){
+    requestAnimationFrame(animate);
+    const t = clock.getElapsedTime();
+    bouquet.rotation.y = Math.sin(t*0.3)*0.1;
+    bouquet.position.y = Math.sin(t*0.6)*0.05;
+    textMesh.rotation.y = Math.sin(t*0.3)*0.05;
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', ()=>{
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  document.getElementById('downloadBtn').addEventListener('click', e=>{
+    e.preventDefault();
+    const blob = new Blob([document.documentElement.outerHTML], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ramo_grande_flores_3d.html';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+  </script>
+</body>
+</html>
